@@ -1,0 +1,66 @@
+[
+  {
+    "question_text": "How many glasses of water do you drink daily?",
+    "category": "water",
+    "relevance": null,
+    "answer_type": "multiple_choice",
+    "answer_options": ["Less than 4 glasses", "4–8 glasses", "More than 8 glasses"],
+    "sort_order": 1
+  },
+  {
+    "question_text": "How would you rate your stress level?",
+    "category": "stress",
+    "relevance": null,
+    "answer_type": "multiple_choice",
+    "answer_options": ["Low", "Medium", "High"],
+    "sort_order": 2
+  },
+  {
+    "question_text": "How many hours of sleep do you get per night?",
+    "category": "sleep",
+    "relevance": null,
+    "answer_type": "multiple_choice",
+    "answer_options": ["Less than 6 hours", "6–8 hours", "More than 8 hours"],
+    "sort_order": 3
+  },
+  {
+    "question_text": "Do you currently use any skincare products?",
+    "category": "products",
+    "relevance": null,
+    "answer_type": "yes_no",
+    "answer_options": ["yes", "no"],
+    "sort_order": 4
+  },
+  {
+    "question_text": "Do you consume dairy products regularly?",
+    "category": "dairy",
+    "relevance": ["Dry_Acne", "Oily_Acne", "Normal_Acne"],
+    "answer_type": "yes_no",
+    "answer_options": ["yes", "no"],
+    "sort_order": 5
+  },
+  {
+    "question_text": "How oily does your skin feel by midday?",
+    "category": "oil_production",
+    "relevance": ["Oily_Acne", "Oily_NoAcne"],
+    "answer_type": "scale_1_5",
+    "answer_options": null,
+    "sort_order": 6
+  },
+  {
+    "question_text": "How often does your skin feel tight or flaky?",
+    "category": "skin_dryness",
+    "relevance": ["Dry_Acne", "Dry_NoAcne"],
+    "answer_type": "scale_1_5",
+    "answer_options": null,
+    "sort_order": 7
+  },
+  {
+    "question_text": "Do you spend many hours in air-conditioned spaces?",
+    "category": "ac_exposure",
+    "relevance": ["Dry_Acne", "Dry_NoAcne", "Normal_NoAcne"],
+    "answer_type": "yes_no",
+    "answer_options": ["yes", "no"],
+    "sort_order": 8
+  }
+]

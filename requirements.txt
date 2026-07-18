@@ -1,0 +1,16 @@
+flask==3.0.3
+flask-cors==4.0.1
+flask-bcrypt==1.0.1
+flask-mail==0.10.0
+flask-sqlalchemy==3.1.1
+pymysql==1.1.1
+cloudinary==1.41.0
+apscheduler==3.10.4
+PyJWT==2.9.0
+python-dotenv==1.0.1
+requests==2.32.3
+tensorflow>=2.16.1
+opencv-python-headless>=4.8.0
+pillow>=10.0.0
+numpy>=1.26.4
+cryptography>=43.0.0

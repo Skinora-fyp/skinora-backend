@@ -1,0 +1,123 @@
+{
+  "remedies": [
+    {
+      "key": "aloe_vera",
+      "name": "Aloe Vera Gel",
+      "ingredients": ["Pure aloe vera gel"],
+      "instructions": [
+        "Wash the face gently with a mild cleanser.",
+        "Apply a thin, even layer of pure aloe vera gel to the entire face.",
+        "Leave it on overnight.",
+        "Wash off with cool water the next morning."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.nccih.nih.gov/health/aloe-vera",
+      "lifestyle_tags": ["high_stress", "low_water"]
+    },
+    {
+      "key": "raw_honey",
+      "name": "Raw Honey Face Mask",
+      "ingredients": ["Raw honey (unpasteurised)"],
+      "instructions": [
+        "Cleanse the face with warm water.",
+        "Apply a thin layer of raw honey to the face.",
+        "Leave it on for 15 minutes.",
+        "Rinse thoroughly with lukewarm water and pat dry."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.reddit.com/search/?q=raw+honey+face+mask&cId=b4b0bd6d-296a-43d7-b6f7-68523ce1c9ba&iId=7f315009-c15b-4f90-bc26-7ad14e8ea8c9",
+      "lifestyle_tags": ["poor_sleep"]
+    },
+    {
+      "key": "oatmeal",
+      "name": "Oatmeal Face Mask",
+      "ingredients": ["Plain oatmeal (finely ground)", "Warm water"],
+      "instructions": [
+        "Mix finely ground oatmeal with enough warm water to form a smooth paste.",
+        "Apply the paste gently to the face, avoiding the eye area.",
+        "Leave it on for 15 minutes.",
+        "Rinse gently with cool water and pat dry."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.byrdie.com/oatmeal-facial-masks-2442870",
+      "lifestyle_tags": ["high_stress", "poor_sleep"]
+    },
+    {
+      "key": "green_tea",
+      "name": "Green Tea Toner",
+      "ingredients": ["Green tea bag or 1 tsp loose green tea", "Hot water", "Cotton pads"],
+      "instructions": [
+        "Brew a strong cup of green tea with hot water.",
+        "Allow the tea to cool completely to room temperature.",
+        "Pour into a clean bottle or bowl.",
+        "Apply to the face using a cotton pad.",
+        "Use once daily, preferably in the morning or evening routine."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5384166/",
+      "lifestyle_tags": ["high_stress", "dairy"]
+    },
+    {
+      "key": "avocado",
+      "name": "Avocado Face Mask",
+      "ingredients": ["Half a ripe avocado"],
+      "instructions": [
+        "Mash half a ripe avocado in a bowl until smooth.",
+        "Apply the mashed avocado evenly to a cleansed face.",
+        "Leave it on for 15 minutes.",
+        "Rinse gently with lukewarm water and pat dry."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.siobeauty.com/blogs/resource-center/6-avocado-face-mask-recipes-you-can-make-at-home",
+      "lifestyle_tags": ["low_water", "poor_sleep"]
+    },
+    {
+      "key": "rose_water",
+      "name": "Rose Water Toner",
+      "ingredients": ["Pure rose water", "Cotton pads"],
+      "instructions": [
+        "Pour pure rose water onto a clean cotton pad.",
+        "Gently wipe the cotton pad across the face.",
+        "Use morning and evening after cleansing.",
+        "No rinsing required — allow it to absorb into the skin."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://plumgoodness.com/blogs/skincare/bulgarian-valley-rose-water-toner-isn-t-your-ordinary-toner",
+      "lifestyle_tags": ["high_stress"]
+    },
+    {
+      "key": "cucumber",
+      "name": "Cucumber Face Mask",
+      "ingredients": ["Half a fresh cucumber"],
+      "instructions": [
+        "Blend half a fresh cucumber until smooth.",
+        "Apply the cucumber paste evenly to a cleansed face.",
+        "Leave it on for 15 minutes.",
+        "Rinse with cool water and pat dry."
+      ],
+      "confidence_level": "High",
+      "source_url": "https://www.healthline.com/health/beauty-skin-care/cucumber-face-mask",
+      "lifestyle_tags": ["high_stress", "low_water"]
+    }
+  ],
+  "condition_remedies": [
+    { "final_condition": "Dry_Acne",     "remedy_key": "aloe_vera",   "sort_order": 1 },
+    { "final_condition": "Dry_Acne",     "remedy_key": "raw_honey",   "sort_order": 2 },
+    { "final_condition": "Dry_Acne",     "remedy_key": "oatmeal",     "sort_order": 3 },
+    { "final_condition": "Oily_Acne",    "remedy_key": "aloe_vera",   "sort_order": 1 },
+    { "final_condition": "Oily_Acne",    "remedy_key": "green_tea",   "sort_order": 2 },
+    { "final_condition": "Oily_Acne",    "remedy_key": "raw_honey",   "sort_order": 3 },
+    { "final_condition": "Normal_Acne",  "remedy_key": "aloe_vera",   "sort_order": 1 },
+    { "final_condition": "Normal_Acne",  "remedy_key": "raw_honey",   "sort_order": 2 },
+    { "final_condition": "Normal_Acne",  "remedy_key": "green_tea",   "sort_order": 3 },
+    { "final_condition": "Dry_NoAcne",   "remedy_key": "oatmeal",     "sort_order": 1 },
+    { "final_condition": "Dry_NoAcne",   "remedy_key": "avocado",     "sort_order": 2 },
+    { "final_condition": "Dry_NoAcne",   "remedy_key": "aloe_vera",   "sort_order": 3 },
+    { "final_condition": "Oily_NoAcne",  "remedy_key": "green_tea",   "sort_order": 1 },
+    { "final_condition": "Oily_NoAcne",  "remedy_key": "rose_water",  "sort_order": 2 },
+    { "final_condition": "Oily_NoAcne",  "remedy_key": "aloe_vera",   "sort_order": 3 },
+    { "final_condition": "Normal_NoAcne","remedy_key": "cucumber",    "sort_order": 1 },
+    { "final_condition": "Normal_NoAcne","remedy_key": "aloe_vera",   "sort_order": 2 },
+    { "final_condition": "Normal_NoAcne","remedy_key": "raw_honey",   "sort_order": 3 }
+  ]
+}

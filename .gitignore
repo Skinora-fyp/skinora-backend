@@ -1,0 +1,39 @@
+# ── Python virtual environment ────────────────────────────────────────────────
+venv/
+.venv/
+
+# ── Python cache / compiled ───────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+instance/
+
+# ── Environment / Secrets ─────────────────────────────────────────────────────
+# Contains DB password, Cloudinary keys, Gmail app password, JWT secret
+.env
+.env.local
+.env.*.local
+
+# ── Uploads (temp local files) ────────────────────────────────────────────────
+uploads/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
