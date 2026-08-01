@@ -1,72 +1,64 @@
+"""
+OpenCV 4.x Haar cascade face detector.
+
+Requires opencv-python >= 4.x (NOT the 5.0 pre-release — it ships without cascade data files).
+Install: pip install opencv-python==4.10.0.84
+
+Uses three frontal-face cascades. Detection parameters are tuned to:
+  - ACCEPT: selfies, close-up skin photos, slightly angled faces
+  - REJECT: logos, scenery, trees, objects, random non-face images
+
+Key parameters:
+  minNeighbors=6   — requires 6 overlapping windows to agree; real faces
+                      generate 15-50+ overlapping windows so this passes
+                      clear face photos easily, while logos/trees (1-5 windows)
+                      are rejected.
+  minSize=(80,80)  — face region must be at least 80x80 px in a 1200px image.
+  area check       — detected region must cover ≥1% of image area to ignore
+                      tiny corner false-positives.
+"""
 import os
-import sys
-import glob
+import cv2
 
 _CASCADE_NAMES = [
-    "haarcascade_frontalface_default.xml",
-    "haarcascade_frontalface_alt2.xml",
-    "haarcascade_frontalface_alt.xml",
-    "haarcascade_profileface.xml",
+    'haarcascade_frontalface_default.xml',
+    'haarcascade_frontalface_alt2.xml',
+    'haarcascade_frontalface_alt.xml',
 ]
 
-
-def _find_cascade(filename: str) -> str | None:
-    candidates = []
-    try:
-        import cv2
-        own_dir = os.path.dirname(os.path.abspath(__file__))
-        candidates.append(os.path.join(own_dir, filename))
-
-        if hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
-            candidates.append(cv2.data.haarcascades + filename)
-
-        cv2_dir = os.path.dirname(cv2.__file__)
-        candidates.append(os.path.join(cv2_dir, 'data', filename))
-        candidates.append(os.path.join(sys.prefix, 'Library', 'etc', 'haarcascades', filename))
-        candidates.append(os.path.join(sys.prefix, 'share', 'opencv4', 'haarcascades', filename))
-        candidates.append(os.path.join(sys.prefix, 'share', 'OpenCV', 'haarcascades', filename))
-
-        for found in glob.glob(os.path.join(sys.prefix, '**', filename), recursive=True):
-            candidates.append(found)
-    except Exception:
-        pass
-
-    for p in candidates:
-        if p and os.path.isfile(p):
-            return p
-    return None
-
+_cascades: list = []
 
 try:
-    import cv2
-
-    _cascades = []
+    _data_dir = cv2.data.haarcascades  # e.g. .../cv2/data/
     for _name in _CASCADE_NAMES:
-        _path = _find_cascade(_name)
-        if _path:
+        _path = os.path.join(_data_dir, _name)
+        if os.path.isfile(_path):
             _clf = cv2.CascadeClassifier(_path)
             if not _clf.empty():
-                _cascades.append((_name, _clf))
-
-    _CV2_OK = len(_cascades) > 0
-    if _CV2_OK:
-        print(f"[face_detector] OK — {len(_cascades)} cascade(s) loaded: {[n for n,_ in _cascades]}")
+                _cascades.append(_clf)
+    if _cascades:
+        print(f'[face_detector] OK — {len(_cascades)} cascade(s) loaded (OpenCV {cv2.__version__})')
     else:
-        print("[face_detector] WARNING: No cascade classifiers loaded — face validation disabled.")
-
+        print('[face_detector] WARNING: cascade files missing — install opencv-python==4.10.0.84')
 except Exception as _e:
-    _CV2_OK = False
-    _cascades = []
-    print(f"[face_detector] WARNING: OpenCV unavailable ({_e}) — face validation disabled.")
+    print(f'[face_detector] ERROR: {_e}')
+
+# Face region must cover this fraction of image area to count as a real detection.
+# Eliminates tiny spurious hits from random textures in corners.
+_MIN_FACE_AREA_FRACTION = 0.01
 
 
 def detect_and_validate_face(image_path: str) -> dict:
     """
-    Detect faces using multiple OpenCV Haar cascades with relaxed parameters.
-    Tries frontal (default + alt + alt2) and profile cascades.
-    Returns face_detected=True if any cascade finds at least one face.
+    Detect faces in an image using multiple Haar cascades.
+
+    Returns a dict with:
+        face_detected (bool)  — True if at least one qualifying face found
+        face_count    (int)   — number of qualifying face regions
+        face_regions  (list)  — list of {x, y, w, h} dicts
+        skipped       (bool)  — True when OpenCV unavailable (cascades not loaded)
     """
-    if not _CV2_OK:
+    if not _cascades:
         return {"face_detected": True, "face_count": 1, "face_regions": [], "skipped": True}
 
     img = cv2.imread(image_path)
@@ -74,33 +66,40 @@ def detect_and_validate_face(image_path: str) -> dict:
         return {"face_detected": False, "face_count": 0, "face_regions": [],
                 "error": "Could not read image file"}
 
-    # Resize very large images to speed up detection
+    # Resize very large images to a standard size for consistent detection
     h, w = img.shape[:2]
     if max(h, w) > 1200:
         scale = 1200 / max(h, w)
         img = cv2.resize(img, (int(w * scale), int(h * scale)))
+        h, w = img.shape[:2]
 
+    img_area = h * w
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Equalise histogram to handle varied lighting
     gray = cv2.equalizeHist(gray)
 
-    all_faces = []
-    for _, clf in _cascades:
-        # Relaxed parameters: lower minNeighbors and minSize catch angled / partial faces
+    raw_faces: list = []
+    for clf in _cascades:
         faces = clf.detectMultiScale(
             gray,
             scaleFactor=1.05,
-            minNeighbors=3,
-            minSize=(30, 30),
+            minNeighbors=6,       # raised from 4 — rejects false positives on logos/scenery
+            minSize=(80, 80),     # raised from (30,30) — face must be a meaningful size
             flags=cv2.CASCADE_SCALE_IMAGE,
         )
         if hasattr(faces, '__len__') and len(faces) > 0:
-            all_faces.extend(faces.tolist())
+            raw_faces.extend(faces.tolist())
 
-    face_count = len(all_faces)
+    # Keep only detections that cover at least 1% of the image area.
+    # A 1200×1200 image has area 1,440,000 px; 1% = 14,400 px ≈ 120×120 face.
+    qualifying = [
+        (x, y, fw, fh) for (x, y, fw, fh) in raw_faces
+        if (fw * fh) / img_area >= _MIN_FACE_AREA_FRACTION
+    ]
+
+    face_count = len(qualifying)
     face_regions = [
-        {"x": int(x), "y": int(y), "w": int(w2), "h": int(h2)}
-        for (x, y, w2, h2) in all_faces
+        {"x": int(x), "y": int(y), "w": int(fw), "h": int(fh)}
+        for (x, y, fw, fh) in qualifying
     ]
 
     return {

@@ -10,16 +10,10 @@ from .preprocessing import preprocess_image
 
 def predict_skin_type(image_path: str) -> dict:
     """
-    Run the full skin type detection pipeline on a single image file.
+    Run the skin type detection pipeline on a single image file.
 
-    Pipeline:
-        1. Face validation  (OpenCV Haar cascade)
-        2. Preprocessing    (resize 224×224, raw float32 for EfficientNetV2S)
-        3. Model inference  (EfficientNetV2S classifier)
-        4. Result formatting
-
-    Args:
-        image_path: Absolute or relative path to the uploaded image file.
+    Face validation is handled at training time (notebooks/train_skin_type.ipynb).
+    Non-face images produce low model confidence and are routed to consultant.
 
     Returns:
         {
@@ -31,14 +25,13 @@ def predict_skin_type(image_path: str) -> dict:
         }
 
     Raises:
-        ValueError: No face detected — caller should return HTTP 400.
         FileNotFoundError: Model files missing from models/ — server config error.
     """
     face_result = detect_and_validate_face(image_path)
-    if not face_result["face_detected"]:
+    if not face_result.get("skipped") and not face_result["face_detected"]:
         raise ValueError(
             "No face detected in the uploaded image. "
-            "Please upload a clear, well-lit frontal facial photograph."
+            "Please upload a clear, well-lit frontal face photograph."
         )
 
     model = get_skin_type_model()
@@ -68,16 +61,10 @@ def predict_skin_type(image_path: str) -> dict:
 
 def predict_acne(image_path: str) -> dict:
     """
-    Run the full acne detection pipeline on a single image file.
+    Run the acne detection pipeline on a single image file.
 
-    Pipeline:
-        1. Face validation  (OpenCV Haar cascade)
-        2. Preprocessing    (resize 224×224, raw float32 for EfficientNetV2S)
-        3. Model inference  (EfficientNetV2S binary classifier)
-        4. Result formatting
-
-    Args:
-        image_path: Absolute or relative path to the uploaded image file.
+    Face validation is handled at training time (notebooks/train_acne.ipynb).
+    Non-face images produce low model confidence and are routed to consultant.
 
     Returns:
         {
@@ -90,14 +77,13 @@ def predict_acne(image_path: str) -> dict:
         }
 
     Raises:
-        ValueError: No face detected — caller should return HTTP 400.
         FileNotFoundError: Model files missing from models/ — server config error.
     """
     face_result = detect_and_validate_face(image_path)
-    if not face_result["face_detected"]:
+    if not face_result.get("skipped") and not face_result["face_detected"]:
         raise ValueError(
             "No face detected in the uploaded image. "
-            "Please upload a clear, well-lit frontal facial photograph."
+            "Please upload a clear, well-lit frontal face photograph."
         )
 
     model = get_acne_model()
