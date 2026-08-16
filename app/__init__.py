@@ -16,7 +16,7 @@ def create_app():
 
     # Import all models so SQLAlchemy registers their tables
     with app.app_context():
-        from .models import user, detection, question, questionnaire_response, remedy, tracking  # noqa
+        from .models import user, detection, question, questionnaire_response, remedy, tracking, checkin_notification  # noqa
         db.create_all()
 
     # Blueprints
