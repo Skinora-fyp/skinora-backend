@@ -1,11 +1,21 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify
 from ..extensions import db
 from ..models.tracking import Tracking
 from ..models.remedy import Remedy, ConditionRemedy
 from ..models.detection import Detection
-from ..services.email_service import send_adaptive_response_email, send_tracking_setup_email
+from ..services.email_service import (
+    send_adaptive_response_email,
+    send_tracking_setup_email,
+    send_reminder_email,
+)
 from ..utils import token_required
+
+SL_TZ = timezone(timedelta(hours=5, minutes=30))
+
+def _sl_now():
+    """Current naive datetime in Sri Lanka local time (UTC+5:30)."""
+    return datetime.now(SL_TZ).replace(tzinfo=None)
 
 tracking_bp = Blueprint('tracking', __name__)
 
@@ -38,7 +48,7 @@ def create_tracking(current_user):
         detection_id = latest.id if latest else None
 
     days = 7 if frequency == 'weekly' else 30
-    next_reminder = datetime.utcnow() + timedelta(days=days)
+    next_reminder = _sl_now() + timedelta(days=days)
 
     tracking = Tracking(
         user_id=current_user.id,
@@ -149,3 +159,29 @@ def dashboard(current_user):
         'detections': [d.to_dict() for d in detections],
         'trackings': [t.to_dict() for t in trackings],
     }), 200
+
+
+@tracking_bp.route('/send-reminder', methods=['POST'])
+@token_required
+def send_reminder_now(current_user):
+    """
+    Test/manual trigger: immediately sends the reminder email for the
+    user's most recent active tracking record. Safe to call at any time.
+    """
+    tracking = (
+        Tracking.query
+        .filter_by(user_id=current_user.id, is_active=True)
+        .order_by(Tracking.started_at.desc())
+        .first()
+    )
+    if not tracking:
+        return jsonify({'error': 'No active tracking found. Set up tracking first.'}), 404
+
+    ok = send_reminder_email(tracking)
+    return jsonify({
+        'sent': ok,
+        'email': current_user.email,
+        'remedy': tracking.remedy.name if tracking.remedy else None,
+        'frequency': tracking.frequency,
+        'next_reminder_sl': tracking.next_reminder.strftime('%Y-%m-%d %H:%M') if tracking.next_reminder else None,
+    }), 200 if ok else 500
