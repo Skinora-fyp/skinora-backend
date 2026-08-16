@@ -50,6 +50,45 @@ def send_welcome_email(user) -> bool:
     )
 
 
+def send_tracking_setup_email(user, tracking) -> bool:
+    remedy_name = tracking.remedy.name if tracking.remedy else 'your selected remedy'
+    frequency   = tracking.frequency
+    freq_label  = 'every week' if frequency == 'weekly' else 'every month'
+    freq_days   = '7 days'     if frequency == 'weekly' else '30 days'
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+
+    body = f"""
+    <p style="font-size:15px;line-height:1.6;">Hi {user.name},</p>
+    <p style="font-size:15px;line-height:1.6;">
+      Your progress tracking is now active for <strong>{remedy_name}</strong>.
+      We will send you a check-in reminder <strong>{freq_label}</strong> so you know
+      when to upload a new photo and see how your skin is responding.
+    </p>
+    <div style="background:#F4F6EA;border:1px solid #D5DBA8;border-radius:12px;padding:20px 24px;margin:20px 0;">
+      <p style="font-size:13px;color:#5E6A2A;margin:0 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Your tracking plan</p>
+      <table style="font-size:14px;color:#4F5A2A;border-collapse:collapse;width:100%;">
+        <tr><td style="padding:4px 0;color:#9C9A8C;width:130px;">Remedy</td><td><strong>{remedy_name}</strong></td></tr>
+        <tr><td style="padding:4px 0;color:#9C9A8C;">Check-in frequency</td><td><strong>{freq_label.capitalize()}</strong></td></tr>
+        <tr><td style="padding:4px 0;color:#9C9A8C;">First reminder in</td><td><strong>{freq_days}</strong></td></tr>
+      </table>
+    </div>
+    <p style="font-size:14px;color:#6B6A60;line-height:1.6;">
+      When your reminder arrives, take a new photo in the same lighting as your original scan.
+      Our AI will compare the images and tell you whether to continue, switch, or seek expert advice.
+    </p>
+    <a href="{frontend_url}/upload"
+       style="display:inline-block;background:#BECA5C;color:#2A2D14;text-decoration:none;
+              padding:14px 28px;border-radius:999px;font-weight:700;font-size:14px;margin:16px 0;">
+      Go to Skinora Dashboard &rarr;
+    </a>
+    """
+    return _send(
+        subject=f"Tracking started ✓ — reminder {freq_label} for {remedy_name}",
+        recipients=[user.email],
+        html=_brand_wrap(body),
+    )
+
+
 def send_reminder_email(tracking) -> None:
     user = tracking.user
     remedy_name = tracking.remedy.name if tracking.remedy else 'your selected remedy'
