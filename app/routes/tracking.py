@@ -4,7 +4,7 @@ from ..extensions import db
 from ..models.tracking import Tracking
 from ..models.remedy import Remedy, ConditionRemedy
 from ..models.detection import Detection
-from ..services.email_service import send_adaptive_response_email
+from ..services.email_service import send_adaptive_response_email, send_tracking_setup_email
 from ..utils import token_required
 
 tracking_bp = Blueprint('tracking', __name__)
@@ -50,6 +50,11 @@ def create_tracking(current_user):
     )
     db.session.add(tracking)
     db.session.commit()
+
+    try:
+        send_tracking_setup_email(current_user, tracking)
+    except Exception:
+        pass  # email failure must never block the API response
 
     return jsonify({
         'tracking_id': tracking.id,
