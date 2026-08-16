@@ -76,10 +76,10 @@ def send_tracking_setup_email(user, tracking) -> bool:
       When your reminder arrives, take a new photo in the same lighting as your original scan.
       Our AI will compare the images and tell you whether to continue, switch, or seek expert advice.
     </p>
-    <a href="{frontend_url}/upload"
+    <a href="{frontend_url}/progress"
        style="display:inline-block;background:#BECA5C;color:#2A2D14;text-decoration:none;
               padding:14px 28px;border-radius:999px;font-weight:700;font-size:14px;margin:16px 0;">
-      Go to Skinora Dashboard &rarr;
+      View my progress dashboard &rarr;
     </a>
     """
     return _send(
@@ -89,45 +89,45 @@ def send_tracking_setup_email(user, tracking) -> bool:
     )
 
 
-def send_reminder_email(tracking) -> None:
-    user = tracking.user
+def send_reminder_email(tracking) -> bool:
+    user        = tracking.user
     remedy_name = tracking.remedy.name if tracking.remedy else 'your selected remedy'
+    frequency   = tracking.frequency
+    freq_label  = 'weekly' if frequency == 'weekly' else 'monthly'
+    freq_days   = '7 days' if frequency == 'weekly' else '30 days'
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
 
     body = f"""
     <p style="font-size:15px;line-height:1.6;">Hi {user.name},</p>
     <p style="font-size:15px;line-height:1.6;">
-      It's time for your <strong>{tracking.frequency}</strong> skin check-in.
-      How is your skin responding to <strong>{remedy_name}</strong>?
+      Your <strong>{freq_label} skin check-in</strong> is ready.
+      It has been <strong>{freq_days}</strong> since you started using
+      <strong>{remedy_name}</strong> — time to take a new photo and see how your skin is responding.
     </p>
-    <p style="font-size:14px;color:#6B6A60;margin:20px 0 8px;">Tap your progress below:</p>
-    <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-      <tr>
-        <td style="padding:0 8px 0 0;">
-          <a href="http://localhost:5173/checkin?status=better&tracking={tracking.id}"
-             style="display:inline-block;background:#BECA5C;color:#2A2D14;text-decoration:none;
-                    padding:12px 20px;border-radius:999px;font-weight:600;font-size:13px;">
-            Getting better &#128077;
-          </a>
-        </td>
-        <td style="padding:0 8px;">
-          <a href="http://localhost:5173/checkin?status=no_progress&tracking={tracking.id}"
-             style="display:inline-block;background:#F1EEE3;color:#57564E;text-decoration:none;
-                    padding:12px 20px;border-radius:999px;font-weight:600;font-size:13px;">
-            No change yet
-          </a>
-        </td>
-        <td style="padding:0 0 0 8px;">
-          <a href="http://localhost:5173/checkin?status=worse&tracking={tracking.id}"
-             style="display:inline-block;background:#FDF4F0;color:#B05E3C;text-decoration:none;
-                    padding:12px 20px;border-radius:999px;font-weight:600;font-size:13px;">
-            Getting worse
-          </a>
-        </td>
-      </tr>
-    </table>
+    <div style="background:#F4F6EA;border:1px solid #D5DBA8;border-radius:12px;padding:18px 22px;margin:20px 0;">
+      <p style="font-size:13px;color:#5E6A2A;margin:0 0 8px;font-weight:600;
+                text-transform:uppercase;letter-spacing:.06em;">How it works</p>
+      <ol style="font-size:14px;color:#4F5A2A;line-height:1.8;margin:0;padding-left:18px;">
+        <li>Log in to your Skinora account</li>
+        <li>Upload a new photo — same lighting as your first scan</li>
+        <li>Our AI compares the images and tells you: Improved, No change, or Worse</li>
+      </ol>
+    </div>
+    <p style="font-size:14px;color:#6B6A60;line-height:1.6;margin:0 0 20px;">
+      The whole process takes about 30 seconds.
+      Your progress dashboard will update automatically after the scan.
+    </p>
+    <a href="{frontend_url}/progress"
+       style="display:inline-block;background:#BECA5C;color:#2A2D14;text-decoration:none;
+              padding:14px 32px;border-radius:999px;font-weight:700;font-size:15px;margin-bottom:8px;">
+      Log in &amp; check my progress &rarr;
+    </a>
+    <p style="font-size:12px;color:#A8A698;margin-top:20px;line-height:1.6;">
+      You are receiving this because you set up {freq_label} progress tracking on Skinora.
+    </p>
     """
-    _send(
-        subject=f"Skinora: How is your skin doing with {remedy_name}?",
+    return _send(
+        subject=f"Your {freq_label} skin check-in is ready — Skinora 🌿",
         recipients=[user.email],
         html=_brand_wrap(body),
     )

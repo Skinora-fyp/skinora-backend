@@ -19,6 +19,7 @@ def _run_reminders(app):
         try:
             from app.extensions import db
             from app.models.tracking import Tracking
+            from app.models.checkin_notification import CheckinNotification
             from app.services.email_service import send_reminder_email
 
             now_sl = sl_now()
@@ -28,7 +29,13 @@ def _run_reminders(app):
             ).all()
 
             for t in due:
-                send_reminder_email(t)
+                ok = send_reminder_email(t)
+                if ok:
+                    db.session.add(CheckinNotification(
+                        user_id=t.user_id,
+                        tracking_id=t.id,
+                        due_at=t.next_reminder or now_sl,
+                    ))
                 days = 7 if t.frequency == 'weekly' else 30
                 t.next_reminder = sl_now() + timedelta(days=days)
 

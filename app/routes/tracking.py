@@ -4,6 +4,7 @@ from ..extensions import db
 from ..models.tracking import Tracking
 from ..models.remedy import Remedy, ConditionRemedy
 from ..models.detection import Detection
+from ..models.checkin_notification import CheckinNotification
 from ..services.email_service import (
     send_adaptive_response_email,
     send_tracking_setup_email,
@@ -161,6 +162,113 @@ def dashboard(current_user):
     }), 200
 
 
+@tracking_bp.route('/due', methods=['GET'])
+@token_required
+def check_due(current_user):
+    """Return whether the user has an active tracking reminder that is due."""
+    tracking = (
+        Tracking.query
+        .filter_by(user_id=current_user.id, is_active=True)
+        .order_by(Tracking.started_at.desc())
+        .first()
+    )
+    if not tracking:
+        return jsonify({'due': False, 'tracking': None, 'old_detection': None}), 200
+
+    now_sl = _sl_now()
+    is_due = bool(tracking.next_reminder and tracking.next_reminder <= now_sl)
+
+    t_dict = tracking.to_dict()
+    t_dict['remedy_name'] = tracking.remedy.name if tracking.remedy else None
+
+    old_det = None
+    if tracking.detection_id:
+        det = db.session.get(Detection, tracking.detection_id)
+        old_det = det.to_dict() if det else None
+
+    return jsonify({'due': is_due, 'tracking': t_dict, 'old_detection': old_det}), 200
+
+
+@tracking_bp.route('/compare', methods=['POST'])
+@token_required
+def compare_progress(current_user):
+    """
+    Compare a new detection against the original tracking detection to determine progress.
+    Schedules the next reminder automatically after comparison.
+    """
+    data = request.get_json() or {}
+    new_detection_id = data.get('detection_id')
+
+    if not new_detection_id:
+        return jsonify({'error': 'detection_id is required'}), 400
+
+    tracking = (
+        Tracking.query
+        .filter_by(user_id=current_user.id, is_active=True)
+        .order_by(Tracking.started_at.desc())
+        .first()
+    )
+    if not tracking:
+        return jsonify({'error': 'No active tracking found'}), 404
+
+    new_det = db.session.get(Detection, new_detection_id)
+    if not new_det:
+        return jsonify({'error': 'New detection not found'}), 404
+
+    old_det = db.session.get(Detection, tracking.detection_id) if tracking.detection_id else None
+
+    def _health_score(det):
+        # 0–1 scale: higher = healthier (less/no acne)
+        if det.acne_status == 'NoAcne':
+            return float(det.acne_confidence)
+        else:
+            return 1.0 - float(det.acne_confidence)
+
+    if old_det:
+        old_score = _health_score(old_det)
+        new_score = _health_score(new_det)
+        delta     = new_score - old_score
+        if delta > 0.08:
+            progress = 'improved'
+        elif delta < -0.08:
+            progress = 'worse'
+        else:
+            progress = 'no_change'
+    else:
+        old_score = None
+        new_score = _health_score(new_det)
+        delta     = None
+        progress  = 'no_change'
+
+    # Map to Tracking.last_status enum values
+    status_map = {'improved': 'better', 'no_change': 'no_progress', 'worse': 'worse'}
+    tracking.last_status = status_map[progress]
+    days = 7 if tracking.frequency == 'weekly' else 30
+    tracking.next_reminder = _sl_now() + timedelta(days=days)
+
+    # Resolve any pending notifications for this user — check-in fulfilled
+    now = _sl_now()
+    CheckinNotification.query.filter_by(
+        user_id=current_user.id, is_resolved=False
+    ).update({'is_resolved': True, 'resolved_at': now})
+
+    db.session.commit()
+
+    return jsonify({
+        'progress':      progress,
+        'old_score':     round(old_score, 4) if old_score is not None else None,
+        'new_score':     round(new_score, 4),
+        'delta':         round(delta, 4) if delta is not None else None,
+        'old_image_url': old_det.image_url if old_det else None,
+        'new_image_url': new_det.image_url,
+        'old_condition': old_det.final_condition if old_det else None,
+        'new_condition': new_det.final_condition,
+        'old_acne_status': old_det.acne_status if old_det else None,
+        'new_acne_status': new_det.acne_status,
+        'frequency':     tracking.frequency,
+    }), 200
+
+
 @tracking_bp.route('/send-reminder', methods=['POST'])
 @token_required
 def send_reminder_now(current_user):
@@ -178,6 +286,14 @@ def send_reminder_now(current_user):
         return jsonify({'error': 'No active tracking found. Set up tracking first.'}), 404
 
     ok = send_reminder_email(tracking)
+    if ok:
+        db.session.add(CheckinNotification(
+            user_id=current_user.id,
+            tracking_id=tracking.id,
+            due_at=tracking.next_reminder or _sl_now(),
+        ))
+        db.session.commit()
+
     return jsonify({
         'sent': ok,
         'email': current_user.email,
@@ -185,3 +301,13 @@ def send_reminder_now(current_user):
         'frequency': tracking.frequency,
         'next_reminder_sl': tracking.next_reminder.strftime('%Y-%m-%d %H:%M') if tracking.next_reminder else None,
     }), 200 if ok else 500
+
+
+@tracking_bp.route('/notifications/count', methods=['GET'])
+@token_required
+def notifications_count(current_user):
+    """Return count of unresolved check-in notifications for the user."""
+    count = CheckinNotification.query.filter_by(
+        user_id=current_user.id, is_resolved=False
+    ).count()
+    return jsonify({'count': count}), 200
