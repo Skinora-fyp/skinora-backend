@@ -21,6 +21,33 @@ def _brand_wrap(content: str) -> str:
     """
 
 
+def send_otp_email(email: str, otp_code: str, name: str = '') -> bool:
+    greeting = f"Hi {name}," if name else "Hi there,"
+    body = f"""
+    <p style="font-size:15px;line-height:1.6;">{greeting}</p>
+    <p style="font-size:15px;line-height:1.6;">
+      To complete your Skinora account, enter the verification code below.
+      It expires in <strong>10 minutes</strong>.
+    </p>
+    <div style="text-align:center;margin:32px 0;">
+      <div style="display:inline-block;background:#23241C;color:#BECA5C;
+                  font-family:monospace;font-size:38px;font-weight:800;
+                  letter-spacing:14px;padding:22px 36px;border-radius:16px;
+                  text-indent:14px;">
+        {otp_code}
+      </div>
+    </div>
+    <p style="font-size:13px;color:#6B6A60;line-height:1.6;text-align:center;">
+      If you did not request this code, you can safely ignore this email.
+    </p>
+    """
+    return _send(
+        subject='Your Skinora verification code',
+        recipients=[email],
+        html=_brand_wrap(body),
+    )
+
+
 def send_welcome_email(user) -> bool:
     frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
 
