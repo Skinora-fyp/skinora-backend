@@ -1,5 +1,6 @@
+import io
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, send_file
 from ..extensions import db
 from ..models.tracking import Tracking
 from ..models.remedy import Remedy, ConditionRemedy
@@ -9,7 +10,9 @@ from ..services.email_service import (
     send_adaptive_response_email,
     send_tracking_setup_email,
     send_reminder_email,
+    send_progress_report_email,
 )
+from ..services.pdf_service import generate_progress_pdf
 from ..utils import token_required
 
 SL_TZ = timezone(timedelta(hours=5, minutes=30))
@@ -254,18 +257,43 @@ def compare_progress(current_user):
 
     db.session.commit()
 
+    # Generate PDF report and send via email (non-blocking best-effort)
+    try:
+        pdf_bytes = generate_progress_pdf(
+            user=current_user,
+            tracking=tracking,
+            old_det=old_det,
+            new_det=new_det,
+            progress=progress,
+            old_score=old_score,
+            new_score=new_score,
+            delta=delta,
+        )
+        send_progress_report_email(
+            user=current_user,
+            progress=progress,
+            remedy_name=tracking.remedy.name if tracking.remedy else 'N/A',
+            old_score=old_score,
+            new_score=new_score,
+            delta=delta,
+            pdf_bytes=pdf_bytes,
+        )
+    except Exception as e:
+        current_app.logger.error(f'[PDF/EMAIL ERROR] compare_progress: {e}')
+
     return jsonify({
-        'progress':      progress,
-        'old_score':     round(old_score, 4) if old_score is not None else None,
-        'new_score':     round(new_score, 4),
-        'delta':         round(delta, 4) if delta is not None else None,
-        'old_image_url': old_det.image_url if old_det else None,
-        'new_image_url': new_det.image_url,
-        'old_condition': old_det.final_condition if old_det else None,
-        'new_condition': new_det.final_condition,
+        'progress':        progress,
+        'old_score':       round(old_score, 4) if old_score is not None else None,
+        'new_score':       round(new_score, 4),
+        'delta':           round(delta, 4) if delta is not None else None,
+        'old_image_url':   old_det.image_url if old_det else None,
+        'new_image_url':   new_det.image_url,
+        'old_condition':   old_det.final_condition if old_det else None,
+        'new_condition':   new_det.final_condition,
         'old_acne_status': old_det.acne_status if old_det else None,
         'new_acne_status': new_det.acne_status,
-        'frequency':     tracking.frequency,
+        'frequency':       tracking.frequency,
+        'report_emailed':  True,
     }), 200
 
 
@@ -311,3 +339,69 @@ def notifications_count(current_user):
         user_id=current_user.id, is_resolved=False
     ).count()
     return jsonify({'count': count}), 200
+
+
+@tracking_bp.route('/progress-report', methods=['GET'])
+@token_required
+def download_progress_report(current_user):
+    """
+    Generate and return a PDF progress report for download.
+    Requires ?detection_id=<new_detection_id> query param.
+    Compares against the user's active tracking baseline detection.
+    """
+    detection_id = request.args.get('detection_id', type=int)
+    if not detection_id:
+        return jsonify({'error': 'detection_id query param required'}), 400
+
+    tracking = (
+        Tracking.query
+        .filter_by(user_id=current_user.id, is_active=True)
+        .order_by(Tracking.started_at.desc())
+        .first()
+    )
+    if not tracking:
+        return jsonify({'error': 'No active tracking found'}), 404
+
+    new_det = db.session.get(Detection, detection_id)
+    if not new_det or new_det.user_id != current_user.id:
+        return jsonify({'error': 'Detection not found'}), 404
+
+    old_det = db.session.get(Detection, tracking.detection_id) if tracking.detection_id else None
+
+    def _score(det):
+        if det.acne_status == 'NoAcne':
+            return float(det.acne_confidence)
+        return 1.0 - float(det.acne_confidence)
+
+    old_score = _score(old_det) if old_det else None
+    new_score = _score(new_det)
+    delta     = (new_score - old_score) if old_score is not None else None
+
+    if delta is not None:
+        progress = 'improved' if delta > 0.08 else ('worse' if delta < -0.08 else 'no_change')
+    else:
+        progress = 'no_change'
+
+    try:
+        pdf_bytes = generate_progress_pdf(
+            user=current_user,
+            tracking=tracking,
+            old_det=old_det,
+            new_det=new_det,
+            progress=progress,
+            old_score=old_score,
+            new_score=new_score,
+            delta=delta,
+        )
+    except Exception as e:
+        current_app.logger.error(f'[PDF DOWNLOAD ERROR] {e}')
+        return jsonify({'error': 'Failed to generate report'}), 500
+
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='skinora-progress-report.pdf',
+    )

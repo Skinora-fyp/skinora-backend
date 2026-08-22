@@ -160,6 +160,91 @@ def send_reminder_email(tracking) -> bool:
     )
 
 
+def send_progress_report_email(user, progress: str, remedy_name: str,
+                               old_score, new_score, delta,
+                               pdf_bytes: bytes) -> bool:
+    """Send the post-check-in email with the PDF progress report attached."""
+    vcfg = {
+        'improved':  ('#3E7A2A', 'Your skin is improving', '🌿 Great progress!',
+                      'Keep using your remedy and check back at your next scheduled date.'),
+        'no_change': ('#8A6B1E', 'No significant change yet', '→ Steady as she goes',
+                      'Some remedies take 4–8 weeks. Log in to explore alternatives if you prefer.'),
+        'worse':     ('#B05E3C', 'Your skin needs attention', '⚠ Please review your remedy',
+                      'Consider pausing the remedy and consulting a dermatologist.'),
+    }
+    accent, subject_suffix, headline, guidance = vcfg.get(
+        progress, ('#9C9A8C', 'Check-in complete', 'Check-in done', ''))
+
+    sign  = '+' if (delta or 0) >= 0 else ''
+    delta_str = f'{sign}{(delta or 0) * 100:.1f}%' if delta is not None else 'N/A'
+
+    body = f"""
+    <p style="font-size:15px;line-height:1.6;">Hi {user.name},</p>
+    <p style="font-size:15px;line-height:1.6;">
+      Your Skinora skin check-in is complete. Here is a summary of your results.
+      Your full progress report is attached as a PDF.
+    </p>
+
+    <!-- Verdict card -->
+    <div style="border-left:4px solid {accent};background:#F8F7F2;
+                border-radius:0 12px 12px 0;padding:18px 22px;margin:20px 0;">
+      <div style="font-size:18px;font-weight:700;color:{accent};margin-bottom:6px;">{headline}</div>
+      <div style="font-size:13px;color:#6B6A60;line-height:1.6;">{guidance}</div>
+    </div>
+
+    <!-- Score table -->
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+      <tr style="background:#F4F6EA;">
+        <td style="padding:10px 14px;color:#5E6A2A;font-weight:600;">Remedy</td>
+        <td style="padding:10px 14px;color:#23241C;">{remedy_name}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;color:#9C9A8C;">Original health score</td>
+        <td style="padding:10px 14px;color:#23241C;">{f"{old_score*100:.1f}%" if old_score is not None else "N/A"}</td>
+      </tr>
+      <tr style="background:#F4F6EA;">
+        <td style="padding:10px 14px;color:#9C9A8C;">Check-in health score</td>
+        <td style="padding:10px 14px;color:#23241C;">{new_score*100:.1f}%</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;color:#9C9A8C;">Net change</td>
+        <td style="padding:10px 14px;font-weight:700;color:{accent};">{delta_str}</td>
+      </tr>
+    </table>
+
+    <p style="font-size:13px;color:#6B6A60;line-height:1.6;">
+      Your detailed progress report (with scan images and recommendations) is attached to this email as a PDF.
+      You can also log in to your Skinora dashboard to view and download it at any time.
+    </p>
+    """
+
+    try:
+        from flask_mail import Message
+        from ..extensions import mail
+        from flask import current_app
+
+        msg = Message(
+            subject=f'Skinora check-in complete — {subject_suffix}',
+            recipients=[user.email],
+        )
+        msg.html = _brand_wrap(body)
+        msg.attach(
+            filename='skinora-progress-report.pdf',
+            content_type='application/pdf',
+            data=pdf_bytes,
+        )
+        mail.send(msg)
+        current_app.logger.info(f'[EMAIL+PDF OK] {user.email} — progress report')
+        return True
+    except Exception as e:
+        import traceback
+        from flask import current_app
+        current_app.logger.error(
+            f'[EMAIL+PDF FAILED] {user.email}\nError: {e}\n{traceback.format_exc()}'
+        )
+        return False
+
+
 def send_adaptive_response_email(user, tracking, status: str, next_remedy_name: str = None) -> None:
     remedy_name = tracking.remedy.name if tracking.remedy else 'your remedy'
 
