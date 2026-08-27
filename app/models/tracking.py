@@ -13,6 +13,7 @@ class Tracking(db.Model):
     next_reminder = db.Column(db.DateTime, nullable=True)
     last_status = db.Column(db.Enum('better', 'no_progress', 'worse'), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    reminders_paused = db.Column(db.Boolean, default=False, nullable=False)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -26,5 +27,6 @@ class Tracking(db.Model):
             'next_reminder': self.next_reminder.isoformat() if self.next_reminder else None,
             'last_status': self.last_status,
             'is_active': self.is_active,
+            'reminders_paused': self.reminders_paused,
             'started_at': self.started_at.isoformat() if self.started_at else None,
         }
