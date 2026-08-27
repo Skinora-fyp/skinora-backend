@@ -25,6 +25,7 @@ def _run_reminders(app):
             now_sl = sl_now()
             due = Tracking.query.filter(
                 Tracking.is_active == True,
+                Tracking.reminders_paused == False,
                 Tracking.next_reminder <= now_sl,
             ).all()
 

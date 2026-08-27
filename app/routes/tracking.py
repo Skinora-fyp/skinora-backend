@@ -331,6 +331,23 @@ def send_reminder_now(current_user):
     }), 200 if ok else 500
 
 
+@tracking_bp.route('/<int:tracking_id>/reminders', methods=['PATCH'])
+@token_required
+def toggle_reminders(current_user, tracking_id):
+    """Pause or resume email reminders for a specific tracking plan."""
+    tracking = Tracking.query.filter_by(id=tracking_id, user_id=current_user.id).first()
+    if not tracking:
+        return jsonify({'error': 'Tracking record not found'}), 404
+
+    data = request.get_json() or {}
+    if 'paused' not in data:
+        return jsonify({'error': 'paused (bool) is required'}), 400
+
+    tracking.reminders_paused = bool(data['paused'])
+    db.session.commit()
+    return jsonify({'reminders_paused': tracking.reminders_paused}), 200
+
+
 @tracking_bp.route('/notifications/count', methods=['GET'])
 @token_required
 def notifications_count(current_user):
