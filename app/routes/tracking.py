@@ -221,11 +221,19 @@ def compare_progress(current_user):
     old_det = db.session.get(Detection, tracking.detection_id) if tracking.detection_id else None
 
     def _health_score(det):
-        # 0–1 scale: higher = healthier (less/no acne)
+        # Acne component (60%): NoAcne+high-confidence is best
         if det.acne_status == 'NoAcne':
-            return float(det.acne_confidence)
+            acne_score = float(det.acne_confidence)
         else:
-            return 1.0 - float(det.acne_confidence)
+            acne_score = 1.0 - float(det.acne_confidence)
+
+        # Skin type component (40%): Normal=ideal, Dry/Oily=imbalanced
+        skin_base = {'Normal': 1.0, 'Dry': 0.55, 'Oily': 0.50}.get(det.skin_type, 0.65)
+        conf = float(det.skin_type_confidence)
+        # Low-confidence prediction blends toward neutral (0.65)
+        skin_score = skin_base * conf + 0.65 * (1.0 - conf)
+
+        return round(acne_score * 0.60 + skin_score * 0.40, 4)
 
     if old_det:
         old_score = _health_score(old_det)
@@ -387,8 +395,13 @@ def download_progress_report(current_user):
 
     def _score(det):
         if det.acne_status == 'NoAcne':
-            return float(det.acne_confidence)
-        return 1.0 - float(det.acne_confidence)
+            acne_score = float(det.acne_confidence)
+        else:
+            acne_score = 1.0 - float(det.acne_confidence)
+        skin_base = {'Normal': 1.0, 'Dry': 0.55, 'Oily': 0.50}.get(det.skin_type, 0.65)
+        conf = float(det.skin_type_confidence)
+        skin_score = skin_base * conf + 0.65 * (1.0 - conf)
+        return round(acne_score * 0.60 + skin_score * 0.40, 4)
 
     old_score = _score(old_det) if old_det else None
     new_score = _score(new_det)
