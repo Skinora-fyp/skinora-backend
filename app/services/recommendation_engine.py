@@ -14,9 +14,7 @@ def get_remedies(final_condition: str, lifestyle: dict = None) -> list:
         .all()
     )
     remedies = [e.remedy for e in entries if e.remedy]
-
-    if not lifestyle:
-        return [r.to_dict() for r in remedies[:5]]
+    lifestyle = lifestyle or {}
 
     def score(r):
         s = 0
@@ -32,4 +30,5 @@ def get_remedies(final_condition: str, lifestyle: dict = None) -> list:
         return s
 
     remedies.sort(key=lambda r: (0 if r.confidence_level == 'High' else 1, -score(r)))
-    return [r.to_dict() for r in remedies[:5]]
+    top = remedies[:5]
+    return [r.to_dict(rank=i, lifestyle_score=score(r)) for i, r in enumerate(top)]
