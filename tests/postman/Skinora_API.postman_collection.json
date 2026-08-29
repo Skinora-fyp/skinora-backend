@@ -1,0 +1,598 @@
+{
+  "info": {
+    "name": "Skinora API",
+    "description": "Skinora — AI-Powered Skin Condition Classification and Personalized Natural Remedy Recommendation System.\nImport this collection into Postman and set the base_url and token variables before running.\n\nVariables required:\n  base_url  → http://localhost:5000\n  token     → JWT from /api/auth/login response",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token",    "value": "",                       "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/health",
+            "description": "Confirms the backend server and MySQL database are running."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('DB connected', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.status).to.eql('ok');",
+                  "  pm.expect(j.db).to.eql('connected');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/send-otp",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/send-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"yourname@gmail.com\",\n  \"name\": \"Your Name\"\n}"
+            },
+            "description": "Sends a 6-digit OTP to the given email. Run this before /register."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OTP sent', () => pm.response.to.have.status(200));",
+                  "pm.test('sent flag is true', () => pm.expect(pm.response.json().sent).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/verify-otp",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/verify-otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"yourname@gmail.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "description": "Verifies the OTP received by email. Must succeed before /register."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OTP verified', () => pm.response.to.have.status(200));",
+                  "pm.test('verified flag is true', () => pm.expect(pm.response.json().verified).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Your Name\",\n  \"email\": \"yourname@gmail.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "description": "Registers a new user. Requires a verified OTP first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Success message', () => pm.expect(pm.response.json().message).to.include('successful'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"yourname@gmail.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "description": "Logs in and returns a JWT access_token. Copy the token into the collection variable 'token'."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has access_token', () => pm.expect(pm.response.json()).to.have.property('access_token'));",
+                  "if (pm.response.json().access_token) {",
+                  "  pm.collectionVariables.set('token', pm.response.json().access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login — Missing Fields (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "Negative test: should return 400 when body is empty."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login — Wrong Password (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"yourname@gmail.com\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "description": "Negative test: correct email, wrong password."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('WRONG_PASSWORD code', () => pm.expect(pm.response.json().code).to.eql('WRONG_PASSWORD'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Remedies",
+      "item": [
+        {
+          "name": "GET /api/remedies?final_condition=Oily_Acne",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/remedies?final_condition=Oily_Acne",
+              "host": ["{{base_url}}"],
+              "path": ["api", "remedies"],
+              "query": [{ "key": "final_condition", "value": "Oily_Acne" }]
+            },
+            "description": "Returns remedies for the Oily_Acne skin condition."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has remedies array', () => pm.expect(pm.response.json().remedies).to.be.an('array'));",
+                  "if (pm.response.json().remedies.length > 0) {",
+                  "  pm.collectionVariables.set('remedy_id', pm.response.json().remedies[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/remedies — Missing Condition (400)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/remedies",
+            "description": "Negative test: missing final_condition param should return 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/remedies — No Auth (401)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/remedies?final_condition=Oily_Acne",
+            "description": "Negative test: no auth header should return 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/remedies/:id — Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/remedies/99999",
+            "description": "Negative test: non-existent remedy ID should return 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Questionnaire",
+      "item": [
+        {
+          "name": "POST /api/questionnaire/submit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/questionnaire/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": {\n    \"sleep\": \"poor\",\n    \"water\": \"low\",\n    \"stress\": \"high\",\n    \"diet\": \"no\"\n  },\n  \"skin_type\": \"Oily\",\n  \"acne_status\": \"Acne\"\n}"
+            },
+            "description": "Submits lifestyle questionnaire answers and receives a validation score."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has validation_score', () => pm.expect(pm.response.json()).to.have.property('validation_score'));",
+                  "pm.test('Has lifestyle_summary', () => pm.expect(pm.response.json()).to.have.property('lifestyle_summary'));",
+                  "pm.test('Has advices', () => pm.expect(pm.response.json().advices).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/questionnaire/submit — Empty Answers (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/questionnaire/submit",
+            "body": { "mode": "raw", "raw": "{ \"answers\": {} }" },
+            "description": "Negative test: empty answers should return 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/questionnaire/lifestyle",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/questionnaire/lifestyle",
+            "description": "Returns the stored lifestyle data for the current user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has lifestyle key', () => pm.expect(pm.response.json()).to.have.property('lifestyle'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Tracking",
+      "item": [
+        {
+          "name": "GET /api/tracking",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/tracking",
+            "description": "Returns the authenticated user's active tracking plans."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has tracking array', () => pm.expect(pm.response.json().tracking).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/tracking/dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/tracking/dashboard",
+            "description": "Returns user profile + all detections + all tracking plans."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has user', () => pm.expect(pm.response.json()).to.have.property('user'));",
+                  "pm.test('Has detections', () => pm.expect(pm.response.json().detections).to.be.an('array'));",
+                  "pm.test('Has trackings', () => pm.expect(pm.response.json().trackings).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/tracking/due",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/tracking/due",
+            "description": "Returns whether a check-in reminder is currently due."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has due boolean', () => pm.expect(typeof pm.response.json().due).to.eql('boolean'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/tracking/create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remedy_id\": {{remedy_id}},\n  \"frequency\": \"weekly\"\n}"
+            },
+            "description": "Creates a new tracking plan. Requires remedy_id from the remedies endpoint."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has tracking_id', () => pm.expect(pm.response.json()).to.have.property('tracking_id'));",
+                  "pm.test('Has next_reminder', () => pm.expect(pm.response.json()).to.have.property('next_reminder'));",
+                  "if (pm.response.json().tracking_id) {",
+                  "  pm.collectionVariables.set('tracking_id', pm.response.json().tracking_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/tracking/create — Missing remedy_id (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/create",
+            "body": { "mode": "raw", "raw": "{ \"frequency\": \"weekly\" }" },
+            "description": "Negative test: missing remedy_id should return 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/tracking/:id/reminders — Pause",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/{{tracking_id}}/reminders",
+            "body": { "mode": "raw", "raw": "{ \"paused\": true }" },
+            "description": "Pauses email reminders for a tracking plan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('reminders_paused is true', () => pm.expect(pm.response.json().reminders_paused).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/tracking/:id/reminders — Resume",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/{{tracking_id}}/reminders",
+            "body": { "mode": "raw", "raw": "{ \"paused\": false }" },
+            "description": "Re-enables email reminders for a tracking plan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('reminders_paused is false', () => pm.expect(pm.response.json().reminders_paused).to.be.false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/tracking/checkin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/checkin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tracking_id\": {{tracking_id}},\n  \"status\": \"better\"\n}"
+            },
+            "description": "Records a check-in outcome: better | no_progress | worse."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status echoed', () => pm.expect(pm.response.json().status).to.eql('better'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/tracking/checkin — Invalid Status (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization",  "value": "Bearer {{token}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/tracking/checkin",
+            "body": { "mode": "raw", "raw": "{ \"status\": \"great\" }" },
+            "description": "Negative test: invalid status value should return 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/tracking — No Auth (401)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/tracking",
+            "description": "Negative test: no auth header should return 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+
+  ]
+}
