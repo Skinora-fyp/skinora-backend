@@ -19,7 +19,6 @@ def generate_advices(answers: dict) -> list:
     stress = answers.get('stress', '')
     sleep  = answers.get('sleep', '')
 
-    # Hydration
     if water == 'Less than 4 glasses':
         advices.append({'tag': 'low_water',    'icon': '💧',
             'text': 'Drink at least 6–8 glasses of water daily to maintain healthy skin hydration.'})
@@ -30,7 +29,6 @@ def generate_advices(answers: dict) -> list:
         advices.append({'tag': 'high_water',   'icon': '💧',
             'text': 'Excellent hydration habits — keep up your current routine.'})
 
-    # Stress
     if stress == 'High':
         advices.append({'tag': 'high_stress',   'icon': '🧘',
             'text': 'High stress can negatively affect skin health. Try walking, exercise, meditation, or breathing exercises regularly.'})
@@ -83,7 +81,6 @@ def calculate_validation_score(answers: dict, skin_type: str, acne_status: str) 
     skin = (skin_type or '').strip().lower()
     has_acne = (acne_status or '').strip().lower() == 'acne'
 
-    # ── Skin type (max 2) ────────────────────────────────────────────────────
     if skin == 'oily':
         v = answers.get('skin_oily_midday', '')
         if v == 'Very oily':     score += 2
@@ -97,7 +94,6 @@ def calculate_validation_score(answers: dict, skin_type: str, acne_status: str) 
         if v == 'Balanced':                              score += 2
         elif v in ('Sometimes oily', 'Sometimes dry'):  score += 1
 
-    # ── Acne frequency (max 2) ───────────────────────────────────────────────
     freq = answers.get('pimples_last_month', '')
     if has_acne:
         if freq == 'Frequently':  score += 2
@@ -106,7 +102,6 @@ def calculate_validation_score(answers: dict, skin_type: str, acne_status: str) 
         if freq == 'Never':  score += 2
         elif freq == 'Rarely': score += 1
 
-    # ── Acne count (max 2) ───────────────────────────────────────────────────
     count = answers.get('pimples_current_count', '')
     if has_acne:
         if count in ('6–15', 'More than 15'): score += 2

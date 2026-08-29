@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Add backend/ to sys.path so ml/ package can be imported
 _backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
@@ -27,15 +26,12 @@ def run_dual_prediction(image_path: str) -> dict:
     skin_result = predict_skin_type(image_path)
     acne_result = predict_acne(image_path)
 
-    # Normalise label casing: 'dry' → 'Dry', etc.
     raw_skin = skin_result['skin_type']
     skin_type = raw_skin.capitalize() if raw_skin.islower() else raw_skin
 
-    # Map acne class label to schema enum value
     raw_acne = acne_result['acne_class']
     acne_status = 'Acne' if acne_result['has_acne'] else 'NoAcne'
 
-    # Confidence returned as % — convert to 0-1
     skin_conf = round(skin_result['confidence'] / 100.0, 4)
     acne_conf = round(acne_result['confidence'] / 100.0, 4)
 

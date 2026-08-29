@@ -1,6 +1,5 @@
 import os
 import json
-
 try:
     import tensorflow as tf
 except Exception:

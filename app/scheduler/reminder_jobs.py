@@ -5,7 +5,6 @@ import logging
 _scheduler = BackgroundScheduler()
 logger = logging.getLogger(__name__)
 
-# Sri Lanka is UTC+5:30
 SL_TZ = timezone(timedelta(hours=5, minutes=30))
 
 
@@ -55,10 +54,10 @@ def start_scheduler(app):
     _scheduler.add_job(
         lambda: _run_reminders(app),
         trigger='interval',
-        hours=1,                        # check every hour (not 24)
+        hours=1,                        
         id='skinora_reminders',
         replace_existing=True,
-        next_run_time=datetime.now(),   # also run once immediately on startup
+        next_run_time=datetime.now(),  
     )
     _scheduler.start()
     logger.info("APScheduler started — reminders checked every hour (SL timezone).")
