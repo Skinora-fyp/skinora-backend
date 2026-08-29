@@ -15,7 +15,14 @@ class Remedy(db.Model):
     condition_entries = db.relationship('ConditionRemedy', backref='remedy', lazy=True)
     trackings = db.relationship('Tracking', backref='remedy', lazy=True)
 
-    def to_dict(self):
+    def to_dict(self, rank=0, lifestyle_score=0):
+        """
+        rank — 0-indexed position within its already-sorted recommendation list
+               (best match first). lifestyle_score — how many of the user's
+               lifestyle answers this remedy's tags matched. Both feed into a
+               differentiated match% so remedies don't all show the same
+               flat number.
+        """
         _TINTS = ['#C6D29A', '#D4C5A9', '#B8C9A3', '#C9B99A', '#A8BEA0', '#D6C8A0', '#B5CCA8']
         _TAG_LABELS = {
             'high_stress': 'Stress-related skin', 'low_water': 'Low hydration',
@@ -25,6 +32,11 @@ class Remedy(db.Model):
         instructions = self.instructions or []
         tint = _TINTS[(self.id - 1) % len(_TINTS)] if self.id else _TINTS[0]
         for_label = ' · '.join(_TAG_LABELS.get(t, t) for t in tags[:2]) or 'All skin types'
+
+        base = 96 if self.confidence_level == 'High' else 82
+        match = base - (rank * 4) + min(lifestyle_score * 2, 6)
+        match = max(60, min(98, match))
+
         return {
             'id': self.id,
             'name': self.name,
@@ -35,7 +47,7 @@ class Remedy(db.Model):
             'lifestyle_tags': tags,
             # Visual fields the frontend card/detail pages require
             'tag': 'High evidence' if self.confidence_level == 'High' else 'Medium evidence',
-            'match': 95 if self.confidence_level == 'High' else 80,
+            'match': match,
             'tint': tint,
             'image': None,
             'desc': instructions[0] if instructions else self.name,
